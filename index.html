@@ -1,0 +1,2273 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RastroMT — Registro de Madeira</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script type="text/javascript" src="https://ff.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=RVT9e_Dqo1BflJ0a_myMIn_dOEQBzX8hmDOrOQCPgB6_uK9M3Oz4PG6CcUHNmJJb8Vel5bHgANlnBZJEPaCaSKuN6WqHRQbASMedn-ywqWrj3pDJcdBDWYCyVZ9bD4JccOkn3HPoQrTub7nAQLl8rEgNmZYprX85OIhVWNqdLoIqOZeJZAoeIKA4lSZFtXAkbco5-_nzhYqtlRsKLWdH0aWZJIYQZ5JLRQfiKbUoD1LVTmTaUv6Y9_pBWoj1kZjv5XvsEPqsBRKAMUuBVK7vBg" charset="UTF-8"></script><script type="text/javascript" src="https://ff.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=kiMkmNBcBxocscFuXpVFi2FoYdCgumo8p0uRp4aGNGH23NwAi8RxXHCvV_o9KNMw-n565l9CZIYAX-ksuBPYN19TpT6qnrWV3c_JEK35Te9bKMoQMYIg6hmMa8ZnkQHRHChZXjQL8NbeKd2u5kgoLh2ucEIySNZQB18U6S2Oar0vtmTtOfB_iWrQ8yo5TVmsLJSyy1-xmaTpu49keFy2msF2R3QUUIx_ZyrbMEpy_dzUAXd9o41vq5jkL6GCNhq9g2U9HcKO_4izWsi0Y58qKA" charset="UTF-8"></script><script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f4f6f8; --card:#fff; --card2:#fbfcfd;
+      --stroke:rgba(17,24,39,.12); --stroke2:rgba(17,24,39,.08);
+      --text:#111827; --muted:#6b7280; --muted2:#94a3b8;
+      --accent:#2563eb; --accent2:#1d4ed8;
+      --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+      --shadow:0 10px 26px rgba(17,24,39,.08);
+      --shadow2:0 16px 40px rgba(17,24,39,.10);
+      --radius:16px; --radius2:12px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(900px 560px at 15% 0%, rgba(37,99,235,.10), transparent 60%),
+                  radial-gradient(900px 560px at 95% 10%, rgba(22,163,74,.10), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family:var(--font);
+      overflow:hidden;
+    }
+
+    .topbar{
+      height:58px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 16px;
+      border-bottom:1px solid var(--stroke);
+      background:rgba(255,255,255,.72);
+      backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:10;
+    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:850; letter-spacing:.2px;}
+    
+    .logo{
+      width:30px;height:30px;border-radius:10px;
+      /* Removido o gradiente original e inserido o caminho para a imagem local na pasta RastroMT */
+      background-image: url('logo.png'); 
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow:var(--shadow);
+    }
+    
+    .subtitle{font-weight:650;color:var(--muted);font-size:12px;margin-left:10px;display:none}
+    @media(min-width:1050px){.subtitle{display:inline}}
+
+    .right-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px; border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.85);
+      box-shadow:var(--shadow);
+      color:var(--muted);
+      font-size:12px; white-space:nowrap;
+    }
+    .dot{width:9px;height:9px;border-radius:50%; background:var(--bad); box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+    .dot.ok{background:var(--ok); box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+
+    .btn{
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.90);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      font-weight:800;
+      font-size:13px;
+      cursor:pointer;
+      transition:transform .08s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+      box-shadow:var(--shadow);
+    }
+    .btn:hover{transform:translateY(-1px); border-color:rgba(37,99,235,.25); box-shadow:var(--shadow2)}
+    .btn:active{transform:translateY(0px)}
+    .btn.primary{color:#fff;border-color:rgba(37,99,235,.28);background:linear-gradient(135deg, rgba(37,99,235,1), rgba(29,78,216,1))}
+    .btn.good{color:#fff;border-color:rgba(22,163,74,.28);background:linear-gradient(135deg, rgba(22,163,74,1), rgba(21,128,61,1))}
+    .btn.ghost{background:rgba(255,255,255,.70); box-shadow:none}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important;box-shadow:var(--shadow)}
+
+    .spinner{
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(255,255,255,.45);
+      border-top-color:#fff;
+      animation:spin .8s linear infinite;
+      display:none;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .app{
+      height:calc(100% - 58px);
+      padding:14px;
+      display:grid;
+      grid-template-columns: 3fr 1.1fr;
+      gap:14px;
+      max-width:1480px;
+      margin:0 auto;
+    }
+    .panel{
+      border:1px solid var(--stroke);
+      border-radius:var(--radius);
+      background:rgba(255,255,255,.82);
+      box-shadow:var(--shadow2);
+      overflow:hidden;
+      min-width:320px;
+    }
+
+    .tabs{display:none;gap:8px;padding:10px 10px 0;max-width:1480px;margin:0 auto}
+    .tab{
+      flex:1;padding:10px;border-radius:12px;border:1px solid var(--stroke);
+      background:rgba(255,255,255,.85); font-weight:900; color:var(--muted);
+      cursor:pointer; box-shadow:var(--shadow);
+    }
+    .tab.active{color:var(--text);border-color:rgba(37,99,235,.25);box-shadow:var(--shadow2)}
+    @media(max-width:980px){
+      body{overflow:auto}
+      .app{grid-template-columns:1fr;height:auto}
+      .tabs{display:flex}
+      .panel[data-view="hidden"]{display:none}
+      .panel[data-view="shown"]{display:block}
+    }
+
+    .content{height:100%;display:flex;flex-direction:column}
+    .content-scroll{padding:14px; overflow:auto}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr; gap:14px; align-items:start}
+    @media(max-width:1260px){.two-col{grid-template-columns:1fr}}
+    .stack{display:flex;flex-direction:column;gap:14px}
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--stroke2);
+      border-radius:var(--radius2);
+      padding:12px;
+      box-shadow:var(--shadow);
+    }
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:13px;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .title-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+    .row{display:grid;grid-template-columns:1fr 1fr; gap:10px}
+    @media(max-width:560px){.row{grid-template-columns:1fr}}
+    label{font-size:12px;color:var(--muted);display:block;margin:8px 0 6px}
+    input,select,textarea{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(17,24,39,.14);
+      background:#fff;
+      color:var(--text);
+      outline:none;
+      transition:border-color .12s ease, box-shadow .12s ease;
+      font-size:13px;
+    }
+    input:focus,select:focus,textarea:focus{border-color:rgba(37,99,235,.45); box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+    input[readonly]{background:rgba(249,250,251,1); color:rgba(17,24,39,.85)}
+    textarea{min-height:86px; resize:vertical}
+
+    .inline-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    .hint{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.35}
+
+    .badge{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(249,250,251,1);
+      font-size:12px;font-weight:900;color:var(--muted);
+    }
+    .badge.ok{border-color:rgba(22,163,74,.28);color:rgba(22,163,74,1);background:rgba(22,163,74,.08)}
+    .badge.warn{border-color:rgba(217,119,6,.30);color:rgba(217,119,6,1);background:rgba(217,119,6,.08)}
+
+    #map{
+      width:100%; height:300px;
+      border-radius:14px;
+      border:1px solid rgba(17,24,39,.12);
+      overflow:hidden;
+      background:#eef2f7;
+    }
+
+    .status-footer{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:12px 14px;
+      border-top:1px solid var(--stroke);
+      background:rgba(249,250,251,.95);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:4px 6px;
+      border-radius:8px;
+      border:1px solid rgba(17,24,39,.12);
+      background:rgba(255,255,255,.95);
+      color:rgba(17,24,39,.70);
+    }
+
+    /* Terminal */
+    .terminal{
+      height:100%;
+      display:flex; flex-direction:column;
+      background:#0b1220;
+      color:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .term-header{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background:rgba(255,255,255,.03);
+    }
+    .term-title{
+      font-weight:950;font-size:12px;letter-spacing:.35px;text-transform:uppercase;
+      color:rgba(255,255,255,.72)
+    }
+    .term-quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tbtn{
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.92);
+      padding:7px 9px;
+      border-radius:10px;
+      font-weight:900;
+      font-size:12px;
+      cursor:pointer;
+      transition:.12s transform, .12s background;
+      user-select:none;
+    }
+    .tbtn:hover{transform:translateY(-1px); background:rgba(255,255,255,.09)}
+    .tbtn:active{transform:translateY(0px)}
+    .tbtn.good{border-color:rgba(22,163,74,.35); background:rgba(22,163,74,.10)}
+    .tbtn.primary{border-color:rgba(37,99,235,.35); background:rgba(37,99,235,.10)}
+    .tbtn.warn{border-color:rgba(217,119,6,.35); background:rgba(217,119,6,.10)}
+
+    .term-body{
+      padding:10px 12px;
+      overflow:auto; flex:1;
+      font-family:var(--mono);
+      font-size:12.6px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .term-line{margin:0 0 6px 0}
+    .term-dim{color:rgba(255,255,255,.65)}
+    .term-ok{color:rgba(34,197,94,.95)}
+    .term-warn{color:rgba(251,191,36,.95)}
+    .term-bad{color:rgba(248,113,113,.95)}
+    .term-accent{color:rgba(147,197,253,.95)}
+
+    .term-code{
+      margin-top:6px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      overflow:auto;
+    }
+
+    .term-inputbar{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-top:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.03);
+    }
+    .prompt{font-family:var(--mono);font-weight:900;color:rgba(147,197,253,.95);user-select:none;white-space:nowrap}
+    .term-input{
+      flex:1;
+      background:transparent;border:none;outline:none;
+      color:rgba(255,255,255,.92);
+      font-family:var(--mono);
+      font-size:12.6px;
+      padding:2px 0;
+    }
+
+    /* Modals */
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background:rgba(17,24,39,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:9999;
+    }
+    .modal{
+      width:min(920px, 100%);
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      box-shadow:var(--shadow2);
+      overflow:hidden;
+    }
+    .modal header{
+      padding:12px 14px;
+      display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--stroke);
+      background:rgba(249,250,251,1);
+      gap:10px;
+    }
+    .modal header h4{margin:0;font-size:13px;font-weight:950}
+    .modal .body{padding:12px 14px 14px}
+    .modal pre{
+      margin:0; padding:10px 12px;
+      border-radius:12px;
+      background:rgba(249,250,251,1);
+      border:1px solid var(--stroke2);
+      overflow:auto;
+      max-height:55vh;
+      font-family:var(--mono);
+      font-size:12.4px;
+    }
+    .modal .footer{
+      padding:10px 14px 14px;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      border-top:1px solid var(--stroke);
+      background:rgba(249,250,251,1);
+      flex-wrap:wrap;
+    }
+
+    /* QR layout */
+    .qr-grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media(max-width:780px){.qr-grid{grid-template-columns:1fr}}
+    .qr-box{
+      border:1px solid var(--stroke2);
+      border-radius:14px;
+      background:rgba(249,250,251,1);
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .qr-canvas{
+      width: 240px;
+      height: 240px;
+      border-radius:14px;
+      border:1px solid rgba(17,24,39,.12);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .seg{
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .seg button{
+      flex:1;
+      min-width: 160px;
+      padding:10px;
+      border-radius:12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.9);
+      font-weight:950;
+      cursor:pointer;
+      box-shadow: var(--shadow);
+      transition:.12s transform,.12s box-shadow,.12s border-color;
+    }
+    .seg button:hover{transform:translateY(-1px); box-shadow: var(--shadow2); border-color: rgba(37,99,235,.25)}
+    .seg button.active{
+      color:#fff;
+      border-color: rgba(37,99,235,.3);
+      background: linear-gradient(135deg, rgba(37,99,235,1), rgba(29,78,216,1));
+    }
+  
+
+    /* Login overlay */
+    body.login-locked{overflow:hidden !important}
+    .login-overlay{
+      position:fixed; inset:0; z-index:10000;
+      display:flex; align-items:center; justify-content:center;
+      padding:20px;
+      background:
+        radial-gradient(800px 500px at 15% 10%, rgba(37,99,235,.16), transparent 60%),
+        radial-gradient(700px 500px at 85% 15%, rgba(22,163,74,.14), transparent 58%),
+        linear-gradient(180deg, rgba(244,246,248,.96), rgba(255,255,255,.98));
+      backdrop-filter: blur(10px);
+    }
+    .login-shell{
+      width:min(940px, 100%);
+      display:grid; grid-template-columns: 1.1fr .9fr;
+      gap:18px;
+      align-items:stretch;
+    }
+    .login-panel, .login-side{
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      background:rgba(255,255,255,.92);
+      box-shadow:var(--shadow2);
+    }
+    .login-panel{padding:26px}
+    .login-side{
+      padding:26px;
+      background:linear-gradient(160deg, rgba(37,99,235,.10), rgba(22,163,74,.08) 70%, rgba(255,255,255,.95));
+      display:flex; flex-direction:column; justify-content:space-between;
+    }
+    .login-kicker{font-size:12px; font-weight:900; letter-spacing:.22em; text-transform:uppercase; color:var(--accent)}
+    .login-title{margin:10px 0 8px; font-size:34px; line-height:1.02; font-weight:950}
+    .login-copy{margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5}
+    .login-grid{display:grid; gap:12px}
+    .captcha-box{
+      margin-top:6px;
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      background:rgba(249,250,251,.92);
+      padding:14px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    }
+    .captcha-click{
+      display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none;
+      font-weight:800; color:var(--text);
+    }
+    .captcha-check{
+      width:24px; height:24px; border-radius:8px; border:2px solid rgba(17,24,39,.20);
+      display:inline-flex; align-items:center; justify-content:center; background:#fff;
+      transition:.15s ease;
+      font-size:16px; font-weight:900; color:#fff;
+    }
+    .captcha-click.done .captcha-check{
+      background:linear-gradient(135deg, rgba(22,163,74,1), rgba(21,128,61,1));
+      border-color:rgba(22,163,74,.55);
+      color:#fff;
+    }
+    .captcha-chip{
+      padding:7px 10px; border-radius:999px; font-size:11px; font-weight:900;
+      color:var(--muted); border:1px solid var(--stroke); background:#fff;
+    }
+    .login-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+    .login-note{margin-top:12px; color:var(--muted); font-size:12px}
+    .login-error{
+      display:none; margin-top:10px; padding:10px 12px; border-radius:12px;
+      background:rgba(220,38,38,.08); color:var(--bad); border:1px solid rgba(220,38,38,.18);
+      font-size:13px; font-weight:700;
+    }
+    .login-ok{
+      display:none; margin-top:10px; padding:10px 12px; border-radius:12px;
+      background:rgba(22,163,74,.08); color:var(--ok); border:1px solid rgba(22,163,74,.18);
+      font-size:13px; font-weight:700;
+    }
+    .login-demo{
+      margin-top:18px; padding:14px; border-radius:16px; border:1px dashed rgba(37,99,235,.28);
+      background:rgba(255,255,255,.65)
+    }
+    .mini-stat{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:13px; margin-top:14px}
+    .mini-dot{width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg, rgba(37,99,235,1), rgba(22,163,74,1))}
+    @media(max-width:900px){
+      .login-shell{grid-template-columns:1fr}
+      .login-title{font-size:28px}
+      .login-side{order:-1}
+    }
+
+  </style>
+</head>
+
+<body class="login-locked">
+
+  <div id="loginOverlay" class="login-overlay" aria-hidden="false">
+    <div class="login-shell">
+      <section class="login-panel">
+        <div class="login-kicker">Acesso inicial</div>
+        <h1 class="login-title">Entrar no ambiente RastroMT</h1>
+        <p class="login-copy">Página inicial de login antes da tela principal. Usar credenciais de teste e concluir o captcha por clique.</p>
+
+        <div class="login-grid">
+          <div>
+            <label for="loginUser">Usuário</label>
+            <input id="loginUser" placeholder="Digite o usuário" autocomplete="username" />
+          </div>
+          <div>
+            <label for="loginPass">Senha</label>
+            <input id="loginPass" type="password" placeholder="Digite a senha" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <div class="captcha-box">
+          <div id="captchaSimulator" class="captcha-click" role="button" tabindex="0" aria-pressed="false">
+            <span class="captcha-check" id="captchaCheck">✓</span>
+            <span>Não sou um robô <span style="color:var(--muted);font-weight:700">(operador de teste)</span></span>
+          </div>
+          <span id="captchaStatus" class="captcha-chip">Captcha pendente</span>
+        </div>
+
+        <div class="login-actions">
+          <button id="btnLoginEnter" class="btn primary" type="button">Entrar</button>
+          <button id="btnLoginFill" class="btn" type="button">Preencher teste</button>
+        </div>
+
+        <div id="loginError" class="login-error">Credenciais inválidas ou captcha não concluído.</div>
+        <div id="loginOk" class="login-ok">Login validado. Entrando na plataforma…</div>
+
+        <div class="login-demo">
+          <div style="font-weight:950; font-size:13px; margin-bottom:6px">Dados da operação</div>
+          <div style="color:var(--muted); font-size:13px; line-height:1.5">
+            Usuário: <strong>teste</strong><br />
+            Senha: <strong>teste</strong><br />
+            Captcha: clicar para marcar.
+          </div>
+        </div>
+
+        <div class="login-note"></div>
+      </section>
+
+      <aside class="login-side">
+        <div>
+          <div class="brand" style="margin-bottom:14px">
+            <span class="logo" aria-hidden="true"></span>
+            <span>RastroMT</span>
+          </div>
+          <div style="font-size:24px; font-weight:950; line-height:1.1; margin-bottom:10px">Abertura simples, direta e coerente com a interface.</div>
+          <div style="color:var(--muted); font-size:14px; line-height:1.55">A página inicial filtra o acesso antes de exibir o painel de registro, terminal, QR e PDF.</div>
+
+          <div class="mini-stat"><span class="mini-dot"></span><span>Credencial fixa para demonstração</span></div>
+          <div class="mini-stat"><span class="mini-dot"></span><span>Captcha por clique de teste</span></div>
+          <div class="mini-stat"><span class="mini-dot"></span><span>Sem backend, validação no navegador</span></div>
+        </div>
+
+        <div style="color:var(--muted); font-size:12px">Ambiente demonstrativo • Acesso local</div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span>RastroMT</span>
+      <span class="subtitle">Registro de madeira • Rede <span id="netNameTop"></span></span>
+    </div>
+
+    <div class="right-actions">
+      <span class="chip" title="Rede e nó">
+        <span id="connDot" class="dot"></span>
+        <span id="connText">Desconectado</span>
+        <span style="opacity:.55">·</span>
+        <span id="netChip"></span>
+        <span style="opacity:.55">·</span>
+        <span id="nodeText"></span>
+      </span>
+
+      <button id="btnShare" class="btn" type="button">Compartilhar</button>
+
+      <button id="btnConnect" class="btn primary" type="button">
+        <span id="connSpin" class="spinner"></span>
+        <span id="btnConnectText">Conectar</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabLeft" class="tab active" type="button">RastroMT</button>
+    <button id="tabRight" class="tab" type="button">Terminal</button>
+  </div>
+
+  <div class="app">
+    <section id="panelLeft" class="panel" data-view="shown">
+      <div class="content">
+        <div class="content-scroll">
+
+          <div class="two-col">
+            <div class="stack">
+
+              <div class="card">
+                <h3>
+                  Registro essencial (lote/tora)
+                  <span class="title-actions">
+                    <button id="btnFillDemo" class="btn ghost" type="button">Preencher exemplo</button>
+                    <button id="btnNewEvent" class="btn" type="button">Novo evento</button>
+                  </span>
+                </h3>
+
+                <label for="assetId">ID único do lote/tora *</label>
+                <div class="row">
+                  <input id="assetId" placeholder="UUID/Hash" />
+                  <button id="btnGenId" class="btn" type="button">Gerar</button>
+                </div>
+
+                <label for="eventTs">Data/hora do evento *</label>
+                <div class="row">
+                  <input id="eventTs" placeholder="YYYY-MM-DD HH:mm:ss (UTC-4)" />
+                  <button id="btnGenTs" class="btn" type="button">Agora</button>
+                </div>
+
+                <label for="speciesPreset">Espécie (catálogo) *</label>
+                <div class="row">
+                  <select id="speciesPreset">
+                    <option value="">— Selecionar —</option>
+                  </select>
+                  <button id="btnAddSpecies" class="btn" type="button">Cadastrar</button>
+                </div>
+
+                <div class="row" style="margin-top:6px">
+                  <div>
+                    <label for="speciesCommon">Nome popular *</label>
+                    <input id="speciesCommon" placeholder="ex: Teca" />
+                  </div>
+                  <div>
+                    <label for="speciesSci">Nome científico *</label>
+                    <input id="speciesSci" placeholder="ex: Tectona grandis" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="volumeM3">Volume (m³) *</label>
+                    <input id="volumeM3" type="number" step="0.001" min="0" placeholder="ex: 2.340" />
+                  </div>
+                  <div>
+                    <label for="licenseId">Nº autorização/plano/licença *</label>
+                    <input id="licenseId" placeholder="ex: PMFS-2026-XXXX" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="holderName">Detentor/responsável (nome) *</label>
+                    <input id="holderName" placeholder="ex: Madeireira Exemplo Ltda" />
+                  </div>
+                  <div>
+                    <label for="holderId">Detentor/responsável (CNPJ/ID) *</label>
+                    <input id="holderId" placeholder="ex: 12.345.678/0001-90" />
+                  </div>
+                </div>
+
+                <div class="hint">Atalhos: gerar IDs/horário, preencher exemplo, assinar, registrar e emitir QR/PDF no “Compartilhar”.</div>
+              </div>
+
+              <div class="card">
+                <h3>
+                  Local de origem (mapa)
+                  <span class="title-actions">
+                    <button id="btnMyLoc" class="btn ghost" type="button">Minha localização</button>
+                    <button id="btnClearLoc" class="btn ghost" type="button">Limpar</button>
+                  </span>
+                </h3>
+
+                <div id="map"></div>
+
+                <div class="row" style="margin-top:10px">
+                  <div>
+                    <label for="originLat">Latitude *</label>
+                    <input id="originLat" readonly placeholder="—" />
+                  </div>
+                  <div>
+                    <label for="originLon">Longitude *</label>
+                    <input id="originLon" readonly placeholder="—" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="municipality">Município/UF (aprox.)</label>
+                    <input id="municipality" placeholder="(reverse geocode)" />
+                  </div>
+                  <div>
+                    <label for="addressRef">Referência (aprox.)</label>
+                    <input id="addressRef" placeholder="(reverse geocode)" />
+                  </div>
+                </div>
+
+                <div class="hint">Clique no mapa para posicionar o marcador, ou arraste o marcador.</div>
+              </div>
+
+            </div>
+
+            <div class="stack">
+
+              <div class="card">
+                <h3>Status e ações</h3>
+                <div class="row">
+                  <div class="badge" id="regBadge">Não registrado</div>
+                  <div class="badge" id="txBadge">tx_id: —</div>
+                </div>
+
+                <div class="inline-actions">
+                  <button id="btnPreview" class="btn" type="button">Preview JSON</button>
+                  <button id="btnSign" class="btn" type="button">Assinar</button>
+                  <button id="btnSend" class="btn good" type="button" disabled>Registrar</button>
+                </div>
+
+                <div class="hint">
+                  Terminal: <span class="kbd">help</span>, <span class="kbd">status</span>, <span class="kbd">form show</span>,
+                  <span class="kbd">tx submit</span>, <span class="kbd">qr show</span>, <span class="kbd">pdf record</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3>Evento de custódia (mínimo 1)</h3>
+                <div class="row">
+                  <div>
+                    <label for="custFrom">De (empresa/pessoa) *</label>
+                    <input id="custFrom" placeholder="ex: Detentor/Origem" />
+                  </div>
+                  <div>
+                    <label for="custTo">Para (empresa/pessoa) *</label>
+                    <input id="custTo" placeholder="ex: Serraria/Comprador" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="custOrigin">Origem (local) *</label>
+                    <input id="custOrigin" placeholder="ex: Fazenda X / Talhão Y" />
+                  </div>
+                  <div>
+                    <label for="custDest">Destino (local) *</label>
+                    <input id="custDest" placeholder="ex: Pátio Z / Cidade" />
+                  </div>
+                </div>
+
+                <label for="custDt">Data/hora do evento *</label>
+                <div class="row">
+                  <input id="custDt" placeholder="YYYY-MM-DD HH:mm:ss (UTC-4)" />
+                  <button id="btnGenCustTs" class="btn" type="button">Agora</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3>Documento + evidências (hash) *</h3>
+
+                <div class="row">
+                  <div>
+                    <label for="docNumber">Documento (nº) *</label>
+                    <input id="docNumber" placeholder="ex: DOF 123456 / NF-e 987654" />
+                  </div>
+                  <div>
+                    <label for="docHash">Hash do documento *</label>
+                    <input id="docHash" readonly placeholder="—" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="docText">Texto/Resumo (opcional, base do hash)</label>
+                    <input id="docText" placeholder="Se vazio, usa o nº do documento" />
+                  </div>
+                  <div>
+                    <label>&nbsp;</label>
+                    <button id="btnHashDoc" class="btn" type="button" style="width:100%">Gerar hash do documento</button>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div>
+                    <label for="evidenceFiles">Evidências (arquivos)</label>
+                    <input id="evidenceFiles" type="file" multiple />
+                  </div>
+                  <div>
+                    <label for="evidenceHash">Hash das evidências</label>
+                    <input id="evidenceHash" readonly placeholder="—" />
+                  </div>
+                </div>
+
+                <div class="hint">O registro grava hashes (SHA-256) e metadados essenciais para auditoria e rastreio.</div>
+              </div>
+
+              <div class="card">
+                <h3>Assinatura digital *</h3>
+                <div class="row">
+                  <div>
+                    <label for="signature">Assinatura do emissor</label>
+                    <input id="signature" readonly placeholder="—" />
+                  </div>
+                  <div>
+                    <label for="prevTx">Tx anterior (opcional)</label>
+                    <input id="prevTx" placeholder="hash/tx_id (encadeamento)" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3>Observações</h3>
+                <textarea id="notes" placeholder="Opcional: observações operacionais, condição do lote, ressalvas..."></textarea>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="status-footer">
+          <div>Persistência local • Ledger exportável • QR/PDF</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="kbd">↑↓</span><span style="color:var(--muted)">histórico</span>
+            <span class="kbd">Tab</span><span style="color:var(--muted)">auto-complete</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelRight" class="panel terminal" data-view="hidden">
+      <div class="term-header">
+        <div class="term-title"><span id="termTitleNet"></span> — Node CLI</div>
+        <div class="term-quick">
+          <button class="tbtn" id="qHelp" type="button">help</button>
+          <button class="tbtn primary" id="qStatus" type="button">status</button>
+          <button class="tbtn" id="qForm" type="button">form show</button>
+          <button class="tbtn warn" id="qBlocks" type="button">block latest</button>
+          <button class="tbtn good" id="qSubmit" type="button">tx submit</button>
+          <button class="tbtn" id="qShare" type="button">qr show</button>
+          <button class="tbtn" id="qClear" type="button">clear</button>
+        </div>
+      </div>
+
+      <div id="termOut" class="term-body" aria-live="polite"></div>
+
+      <div class="term-inputbar">
+        <div class="prompt" id="termPrompt">node&gt;</div>
+        <input id="termIn" class="term-input" autocomplete="off" spellcheck="false"
+               placeholder="Digite um comando (ex: help)"/>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header>
+        <h4 id="modalTitle">Preview do registro</h4>
+        <button id="btnCloseModal" class="btn ghost" type="button">Fechar</button>
+      </header>
+      <div class="body">
+        <pre id="previewPre">{}</pre>
+      </div>
+      <div class="footer">
+        <button id="btnCopyPreview" class="btn" type="button">Copiar JSON</button>
+        <button id="btnExportLedger" class="btn primary" type="button">Exportar ledger (JSON)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="speciesBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="speciesTitle">
+      <header>
+        <h4 id="speciesTitle">Cadastrar espécie no catálogo</h4>
+        <button id="btnCloseSpecies" class="btn ghost" type="button">Fechar</button>
+      </header>
+      <div class="body">
+        <div class="row">
+          <div>
+            <label for="newCommon">Nome popular *</label>
+            <input id="newCommon" placeholder="ex: Itaúba" />
+          </div>
+          <div>
+            <label for="newScientific">Nome científico *</label>
+            <input id="newScientific" placeholder="ex: Mezilaurus itauba" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label for="newSource">Fonte (link) (opcional)</label>
+            <input id="newSource" placeholder="https://..." />
+          </div>
+          <div>
+            <label for="newTags">Tags (opcional)</label>
+            <input id="newTags" placeholder="ex: nativa, amazônia" />
+          </div>
+        </div>
+        <div class="hint">O catálogo é persistido localmente e o registro grava o par popular ↔ científico selecionado.</div>
+      </div>
+      <div class="footer">
+        <button id="btnSaveSpecies" class="btn primary" type="button">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shareBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <header>
+        <h4 id="shareTitle">Compartilhar • QR & PDF</h4>
+        <button id="btnCloseShare" class="btn ghost" type="button">Fechar</button>
+      </header>
+
+      <div class="body">
+        <div class="qr-grid">
+          <div class="qr-box">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+              <div style="font-weight:950; font-size:13px;">QR do registro</div>
+              <div class="badge" id="shareTxBadge">tx_id: —</div>
+            </div>
+
+            <div class="seg" aria-label="Modo do QR">
+              <button id="qrModeTx" type="button" class="active">tx_id</button>
+              <button id="qrModeResume" type="button">resumo</button>
+              <button id="qrModeFull" type="button">JSON</button>
+            </div>
+
+            <div class="qr-canvas" id="qrCanvasWrap">
+              <div id="qrTarget" style="width:240px;height:240px;display:flex;align-items:center;justify-content:center;"></div>
+            </div>
+
+            <label for="qrData">Conteúdo do QR</label>
+            <input id="qrData" readonly />
+
+            <div class="inline-actions">
+              <button id="btnQrRefresh" class="btn" type="button">Atualizar</button>
+              <button id="btnQrPng" class="btn" type="button">Baixar PNG</button>
+              <button id="btnQrCopy" class="btn" type="button">Copiar conteúdo</button>
+            </div>
+          </div>
+
+          <div class="qr-box">
+            <div style="font-weight:950; font-size:13px;">Gerador livre</div>
+            <label for="qrFreeText">Texto/URL</label>
+            <input id="qrFreeText" placeholder="Digite qualquer texto para gerar QR" />
+
+            <div class="inline-actions">
+              <button id="btnQrFreeGen" class="btn primary" type="button">Gerar QR</button>
+              <button id="btnQrFreePng" class="btn" type="button">Baixar PNG</button>
+            </div>
+
+            <div class="qr-canvas" style="margin-top:8px;">
+              <div id="qrFreeTarget" style="width:240px;height:240px;display:flex;align-items:center;justify-content:center;"></div>
+            </div>
+
+            <div style="height:10px"></div>
+
+            <div style="font-weight:950; font-size:13px;">Exportar PDF</div>
+            <div class="inline-actions">
+              <button id="btnPdfRecord" class="btn primary" type="button">PDF do registro</button>
+              <button id="btnPdfScreen" class="btn" type="button">PDF da tela</button>
+              <button id="btnPdfLedger" class="btn" type="button">PDF do ledger</button>
+            </div>
+
+            <div class="hint">PDF do registro inclui QR + campos principais. PDF da tela captura o painel do sistema.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <button id="btnLedgerJson" class="btn" type="button">Exportar ledger (JSON)</button>
+        <button id="btnShareClose2" class="btn ghost" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="postLoginConnectBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="postLoginConnectTitle" style="width:min(520px, 100%)">
+      <header>
+        <h4 id="postLoginConnectTitle">Conectar à rede agora?</h4>
+      </header>
+      <div class="body">
+        <div style="font-size:14px; line-height:1.55; color:var(--text)">Login concluído com sucesso. Deseja conectar agora à <strong>Rede Jacarandá</strong> para iniciar o uso da plataforma?</div>
+        <div class="hint" style="margin-top:10px">Pode conectar agora ou continuar desconectado e conectar depois pelo topo da tela.</div>
+      </div>
+      <div class="footer">
+        <button id="btnSkipPostLoginConnect" class="btn ghost" type="button">Agora não</button>
+        <button id="btnPostLoginConnect" class="btn primary" type="button">Conectar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    /*********************
+     * Config
+     *********************/
+    const NET = { name: "Rede Jacarandá", node: "127.0.0.1:7331" };
+    const TZ = "America/Cuiaba";
+
+    /*********************
+     * DOM
+     *********************/
+    const $ = (id) => document.getElementById(id);
+
+    /*********************
+     * State
+     *********************/
+    const state = {
+      connected:false, connecting:false,
+      ledger:[], txIndex:new Map(),
+      cmdHistory:[], cmdIndex:-1,
+      map:null, marker:null,
+      speciesCatalog:[],
+      qrObj:null, qrFreeObj:null,
+      qrMode:"tx"
+    };
+
+    const STORAGE = { ledger:"rastro_ledger_v3", species:"rastro_species_catalog_v3" };
+
+    /*********************
+     * Base Species (reais)
+     *********************/
+    const BASE_SPECIES = [
+      { common:"Teca", scientific:"Tectona grandis", tags:["plantio","exótica"] },
+      { common:"Pinus", scientific:"Pinus spp.", tags:["plantio"] },
+      { common:"Eucalipto", scientific:"Eucalyptus spp.", tags:["plantio"] },
+      { common:"Paricá", scientific:"Schizolobium amazonicum", tags:["plantio","nativa"] },
+      { common:"Mogno-africano", scientific:"Khaya spp.", tags:["plantio","exótica"] },
+      { common:"Itaúba", scientific:"Mezilaurus itauba", tags:["nativa"] },
+      { common:"Cumaru", scientific:"Dipteryx odorata", tags:["nativa"] },
+      { common:"Jatobá", scientific:"Hymenaea courbaril", tags:["nativa"] },
+      { common:"Maçaranduba", scientific:"Manilkara huberi", tags:["nativa"] },
+      { common:"Garapa (Garapeira)", scientific:"Apuleia leiocarpa", tags:["nativa"] },
+      { common:"Cedro", scientific:"Cedrela odorata", tags:["nativa"] },
+      { common:"Angelim", scientific:"Hymenolobium spp.", tags:["nativa"] },
+      { common:"Ipê", scientific:"Handroanthus spp.", tags:["nativa"] },
+      { common:"Freijó", scientific:"Cordia goeldiana", tags:["nativa"] },
+      { common:"Cupiúba", scientific:"Goupia glabra", tags:["nativa"] },
+      { common:"Muiracatiara", scientific:"Astronium lecointei", tags:["nativa"] },
+      { common:"Louro", scientific:"Nectandra spp.", tags:["nativa"] },
+      { common:"Piquiá", scientific:"Caryocar villosum", tags:["nativa"] }
+    ];
+
+    /*********************
+     * Helpers
+     *********************/
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;").replaceAll("<","&lt;")
+        .replaceAll(">","&gt;");
+    }
+    function nowLocal(){
+      const dt = new Date();
+      const fmt = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit",
+        hour:"2-digit", minute:"2-digit", second:"2-digit", hour12:false
+      });
+      const p = fmt.formatToParts(dt).reduce((a,x)=>(a[x.type]=x.value,a),{});
+      return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second} (UTC-4)`;
+    }
+    function uuidv4(){
+      const b = crypto.getRandomValues(new Uint8Array(16));
+      b[6] = (b[6] & 0x0f) | 0x40;
+      b[8] = (b[8] & 0x3f) | 0x80;
+      const hex = [...b].map(x=>x.toString(16).padStart(2,"0")).join("");
+      return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+    }
+    async function sha256Hex(text){
+      const enc = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest("SHA-256", enc);
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+    async function sha256FilesHex(fileList){
+      const parts = [];
+      for(const f of fileList){
+        const ab = await f.arrayBuffer();
+        const hb = await crypto.subtle.digest("SHA-256", ab);
+        const h = [...new Uint8Array(hb)].map(b=>b.toString(16).padStart(2,"0")).join("");
+        parts.push(`${f.name}|${f.size}|${f.lastModified}|${h}`);
+      }
+      return sha256Hex(parts.join("||"));
+    }
+    function canonicalize(obj){
+      const keys = [];
+      JSON.stringify(obj, (k,v) => (keys.push(k), v));
+      keys.sort();
+      return JSON.stringify(obj, keys, 2);
+    }
+    function download(filename, content, mime="application/json;charset=utf-8"){
+      const blob = new Blob([content], {type:mime});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    /*********************
+     * Terminal UI
+     *********************/
+    function tLine(msg, cls="term-dim"){
+      const out = $("termOut");
+      const div = document.createElement("div");
+      div.className = `term-line ${cls}`;
+      div.innerHTML = escapeHtml(msg);
+      out.appendChild(div);
+      out.scrollTop = out.scrollHeight;
+    }
+    function tCode(title, obj, cls="term-dim"){
+      const out = $("termOut");
+      const wrap = document.createElement("div");
+      wrap.className = "term-line";
+      wrap.innerHTML =
+        `<div class="${cls}">${escapeHtml(title)}</div>` +
+        `<div class="term-code"><pre style="margin:0; font-family: var(--mono)">${escapeHtml(JSON.stringify(obj, null, 2))}</pre></div>`;
+      out.appendChild(wrap);
+      out.scrollTop = out.scrollHeight;
+    }
+    function termBanner(){
+      tLine(`${NET.name} Node CLI • endpoint ${NET.node}`, "term-accent");
+      tLine(`Digite "help" para comandos. (Tab autocomplete • ↑↓ histórico)`, "term-dim");
+      tLine(`—`, "term-dim");
+    }
+
+    /*********************
+     * Connection UI (Conectar/Desconectar)
+     *********************/
+    function setConnectedUI(on){
+      $("connDot").classList.toggle("ok", on);
+      $("connText").textContent = on ? "Conectado" : "Desconectado";
+      $("termPrompt").textContent = on ? "node# " : "node> ";
+      $("btnSend").disabled = !on;
+
+      $("btnConnectText").textContent = on ? "Desconectar" : "Conectar";
+      $("btnConnect").classList.toggle("danger", on);
+      $("btnConnect").classList.toggle("primary", !on);
+    }
+    function setConnectingUI(on){
+      $("connSpin").style.display = on ? "inline-block" : "none";
+      $("btnConnect").disabled = on;
+    }
+
+    async function connect(){
+      if(state.connected || state.connecting) return;
+      state.connecting = true;
+      setConnectingUI(true);
+      tLine(`connect tcp://${NET.node} ...`, "term-dim");
+      await sleep(1000);
+      state.connecting = false;
+      state.connected = true;
+      setConnectingUI(false);
+      setConnectedUI(true);
+      tLine(`ok: connected network=${NET.name} node=${NET.node}`, "term-ok");
+    }
+
+    async function disconnect(){
+      if(!state.connected || state.connecting) return;
+      state.connecting = true;
+      setConnectingUI(true);
+      tLine(`disconnect tcp://${NET.node} ...`, "term-dim");
+      await sleep(300);
+      state.connecting = false;
+      state.connected = false;
+      setConnectingUI(false);
+      setConnectedUI(false);
+      tLine(`ok: disconnected`, "term-warn");
+    }
+
+    async function connectOrDisconnect(){
+      if(state.connected) return disconnect();
+      return connect();
+    }
+
+    /*********************
+     * Ledger storage
+     *********************/
+    function loadLedger(){
+      try{
+        const raw = localStorage.getItem(STORAGE.ledger);
+        const data = raw ? JSON.parse(raw) : {blocks:[], tx:[]};
+        state.ledger = data.blocks || [];
+        state.txIndex = new Map((data.tx || []).map(x => [x.tx_id, x]));
+      }catch{
+        state.ledger = [];
+        state.txIndex = new Map();
+      }
+      updateBadges();
+    }
+    function saveLedger(){
+      const txArr = [...state.txIndex.values()];
+      localStorage.setItem(STORAGE.ledger, JSON.stringify({blocks: state.ledger, tx: txArr}, null, 2));
+    }
+    function lastTx(){
+      if(!state.ledger.length) return null;
+      const last = state.ledger[state.ledger.length-1];
+      return last.tx?.[0] || null;
+    }
+    function updateBadges(){
+      const txid = lastTx();
+      if(txid){
+        $("regBadge").textContent = "Registrado";
+        $("regBadge").classList.add("ok");
+        $("txBadge").textContent = "tx_id: " + txid.slice(0, 14) + "…";
+        $("txBadge").classList.add("ok");
+      }else{
+        $("regBadge").textContent = "Não registrado";
+        $("regBadge").classList.remove("ok");
+        $("txBadge").textContent = "tx_id: —";
+        $("txBadge").classList.remove("ok");
+      }
+    }
+    function exportLedgerJson(){
+      const txArr = [...state.txIndex.values()];
+      download("rastro_ledger.json", JSON.stringify({network: NET.name, node: NET.node, blocks: state.ledger, tx: txArr}, null, 2));
+      tLine("export: rastro_ledger.json", "term-ok");
+    }
+
+    /*********************
+     * Species catalog
+     *********************/
+    function keySpecies(s){ return `${(s.common||"").toLowerCase().trim()}|${(s.scientific||"").toLowerCase().trim()}`; }
+    function loadSpecies(){
+      let custom = [];
+      try{
+        const raw = localStorage.getItem(STORAGE.species);
+        custom = raw ? JSON.parse(raw) : [];
+      }catch{ custom = []; }
+
+      const map = new Map();
+      BASE_SPECIES.forEach(s => map.set(keySpecies(s), {...s, id: "base_" + Math.random().toString(16).slice(2,10)}));
+      custom.forEach(s => map.set(keySpecies(s), s));
+      state.speciesCatalog = [...map.values()].sort((a,b)=> a.common.localeCompare(b.common, "pt-BR"));
+    }
+    function saveSpecies(){
+      const custom = state.speciesCatalog.filter(s => !String(s.id||"").startsWith("base_"));
+      localStorage.setItem(STORAGE.species, JSON.stringify(custom, null, 2));
+    }
+    function renderSpeciesSelect(){
+      const sel = $("speciesPreset");
+      sel.innerHTML = `<option value="">— Selecionar —</option>`;
+      state.speciesCatalog.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        const tag = s.tags?.length ? ` [${s.tags.join(", ")}]` : "";
+        opt.textContent = `${s.common} — ${s.scientific}${tag}`;
+        sel.appendChild(opt);
+      });
+    }
+    function setSpeciesInputs(common, sci, readonly){
+      $("speciesCommon").value = common || "";
+      $("speciesSci").value = sci || "";
+      $("speciesCommon").readOnly = !!readonly;
+      $("speciesSci").readOnly = !!readonly;
+    }
+
+    /*********************
+     * Map + Reverse geocode
+     *********************/
+    function initMap(){
+      const center = [-15.601, -56.097]; // Cuiabá default
+      const map = L.map("map", { zoomControl:true }).setView(center, 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19, attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+
+      const marker = L.marker(center, { draggable:true }).addTo(map);
+      state.map = map; state.marker = marker;
+
+      function apply(latlng){
+        $("originLat").value = latlng.lat.toFixed(6);
+        $("originLon").value = latlng.lng.toFixed(6);
+        reverseGeocode(latlng.lat, latlng.lng);
+      }
+      marker.on("dragend", () => apply(marker.getLatLng()));
+      map.on("click", (e) => { marker.setLatLng(e.latlng); apply(e.latlng); });
+      apply(marker.getLatLng());
+    }
+
+    async function reverseGeocode(lat, lon){
+      try{
+        const url = new URL("https://nominatim.openstreetmap.org/reverse");
+        url.searchParams.set("format","jsonv2");
+        url.searchParams.set("lat", lat);
+        url.searchParams.set("lon", lon);
+        url.searchParams.set("zoom","10");
+        url.searchParams.set("addressdetails","1");
+
+        const res = await fetch(url.toString(), { headers:{ "Accept":"application/json" } });
+        if(!res.ok) throw new Error("geocode");
+        const data = await res.json();
+        const addr = data.address || {};
+        const city = addr.city || addr.town || addr.municipality || addr.village || "";
+        const stateName = addr.state || "";
+        const uf = (addr["ISO3166-2-lvl4"] || "").replace("BR-","");
+        const muni = [city, (uf || stateName)].filter(Boolean).join(" / ");
+        $("municipality").value = muni || $("municipality").value;
+        $("addressRef").value = data.display_name ? data.display_name.split(",").slice(0,4).join(", ") : $("addressRef").value;
+      }catch{}
+    }
+
+    async function useMyLocation(){
+      if(!navigator.geolocation){
+        tLine("geolocation: unavailable", "term-warn");
+        return;
+      }
+      tLine("geolocation: requesting…", "term-dim");
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          state.map.setView([latitude, longitude], 15);
+          state.marker.setLatLng({lat:latitude, lng:longitude});
+          $("originLat").value = latitude.toFixed(6);
+          $("originLon").value = longitude.toFixed(6);
+          reverseGeocode(latitude, longitude);
+          tLine("geolocation: ok", "term-ok");
+        },
+        (err) => tLine("geolocation: " + err.message, "term-bad"),
+        { enableHighAccuracy:true, timeout: 8000 }
+      );
+    }
+    function clearLocation(){
+      $("originLat").value = "";
+      $("originLon").value = "";
+      $("municipality").value = "";
+      $("addressRef").value = "";
+      tLine("location: cleared", "term-dim");
+    }
+
+    /*********************
+     * Form read/validate/build tx
+     *********************/
+    function readForm(){
+      const sp = { common:$("speciesCommon").value.trim(), scientific:$("speciesSci").value.trim() };
+      return {
+        asset_id: $("assetId").value.trim(),
+        event_ts: $("eventTs").value.trim(),
+        species: sp,
+        volume_m3: Number($("volumeM3").value),
+        authorization_id: $("licenseId").value.trim(),
+        origin: {
+          lat: $("originLat").value.trim(),
+          lon: $("originLon").value.trim(),
+          municipality: $("municipality").value.trim(),
+          reference: $("addressRef").value.trim()
+        },
+        holder: { name:$("holderName").value.trim(), id:$("holderId").value.trim() },
+        custody_event: {
+          from:$("custFrom").value.trim(),
+          to:$("custTo").value.trim(),
+          origin:$("custOrigin").value.trim(),
+          destination:$("custDest").value.trim(),
+          datetime:$("custDt").value.trim()
+        },
+        document: { number:$("docNumber").value.trim(), hash:$("docHash").value.trim() },
+        evidences: { hash:$("evidenceHash").value.trim() },
+        issuer_signature: $("signature").value.trim(),
+        previous_tx: $("prevTx").value.trim(),
+        notes: $("notes").value.trim(),
+        meta: { network: NET.name, node: NET.node }
+      };
+    }
+
+    function validateForm(d){
+      const e = [];
+      const req = (cond, msg) => { if(!cond) e.push(msg); };
+
+      req(!!d.asset_id, "asset_id");
+      req(!!d.event_ts, "event_ts");
+      req(!!d.species.common, "species.common");
+      req(!!d.species.scientific, "species.scientific");
+      req(Number.isFinite(d.volume_m3) && d.volume_m3 > 0, "volume_m3");
+      req(!!d.authorization_id, "authorization_id");
+      req(!!d.origin.lat && !!d.origin.lon, "origin.lat/lon");
+      req(!!d.holder.name, "holder.name");
+      req(!!d.holder.id, "holder.id");
+      req(!!d.custody_event.from, "custody_event.from");
+      req(!!d.custody_event.to, "custody_event.to");
+      req(!!d.custody_event.origin, "custody_event.origin");
+      req(!!d.custody_event.destination, "custody_event.destination");
+      req(!!d.custody_event.datetime, "custody_event.datetime");
+      req(!!d.document.number, "document.number");
+      req(!!d.document.hash && d.document.hash.length >= 16, "document.hash");
+      req(!!d.issuer_signature && d.issuer_signature.length >= 16, "issuer_signature");
+
+      return e;
+    }
+
+    async function buildTx(){
+      const d = readForm();
+      const errors = validateForm(d);
+      if(errors.length) return { ok:false, errors, data:d };
+
+      const canonical = canonicalize(d);
+      const tx_id = await sha256Hex(canonical);
+      const time = nowLocal();
+      const height = state.ledger.length + 1;
+      const block_hash = await sha256Hex(`block|${height}|${tx_id}|${Date.now()}`);
+
+      const block = { height, hash:block_hash, time, tx:[tx_id] };
+      const tx = { tx_id, ...d, meta:{...d.meta, time, block_height:height, block_hash } };
+
+      return { ok:true, block, tx };
+    }
+
+    /*********************
+     * Hash/sign actions
+     *********************/
+    async function generateDocHash(){
+      const docNum = $("docNumber").value.trim();
+      const docText = $("docText").value.trim();
+      const base = docText || docNum;
+      if(!base){ tLine("hash: provide document.number or docText", "term-bad"); return null; }
+      const h = await sha256Hex(base);
+      $("docHash").value = h;
+      tLine("hash: document hash generated", "term-ok");
+      return h;
+    }
+    async function generateEvidenceHash(){
+      const files = $("evidenceFiles").files;
+      if(!files || !files.length){ $("evidenceHash").value = ""; return null; }
+      $("evidenceHash").value = "calculando…";
+      try{
+        const h = await sha256FilesHex(files);
+        $("evidenceHash").value = h;
+        tLine(`hash: evidences sha256=${h.slice(0,12)}… (${files.length} arquivo(s))`, "term-ok");
+        return h;
+      }catch{
+        $("evidenceHash").value = "";
+        tLine("hash: failed to compute evidences", "term-bad");
+        return null;
+      }
+    }
+    async function sign(){
+      const d = readForm();
+      if(!d.asset_id){ tLine("sign: missing asset_id", "term-bad"); return null; }
+      if(!d.document.hash){ tLine("sign: missing document.hash (generate it first)", "term-bad"); return null; }
+      const issuer_key = "issuer_key_v1";
+      const sig = await sha256Hex(`${d.document.hash}|${d.asset_id}|${d.holder.id}|${issuer_key}`);
+      $("signature").value = sig;
+      tLine("sign: issuer signature generated", "term-ok");
+      return sig;
+    }
+
+    /*********************
+     * Submit
+     *********************/
+    async function submitTx(){
+      if(!state.connected){ tLine("tx submit: node disconnected (connect first)", "term-bad"); return; }
+
+      tLine("tx submit: building payload…", "term-dim");
+      const built = await buildTx();
+      if(!built.ok){
+        tLine("tx submit: validation failed", "term-bad");
+        built.errors.forEach(x => tLine(" - missing: " + x, "term-bad"));
+        return;
+      }
+
+      tLine("tx submit: broadcasting…", "term-dim");
+      await sleep(260 + Math.floor(Math.random()*320));
+      tLine("tx submit: confirming…", "term-dim");
+      await sleep(240 + Math.floor(Math.random()*240));
+
+      state.ledger.push(built.block);
+      state.txIndex.set(built.tx.tx_id, built.tx);
+      saveLedger();
+      updateBadges();
+
+      tLine(`ok: confirmed tx_id=${built.tx.tx_id}`, "term-ok");
+      tLine(`block: #${built.block.height} hash=${built.block.hash.slice(0,16)}…`, "term-accent");
+      tCode("payload:", built.tx, "term-dim");
+
+      // Atualiza QR badge se share aberto
+      refreshShareBadge();
+    }
+
+    /*********************
+     * Preview modal
+     *********************/
+    function openPreview(){
+      $("previewPre").textContent = JSON.stringify(readForm(), null, 2);
+      $("modalBackdrop").style.display = "flex";
+      $("modalBackdrop").setAttribute("aria-hidden","false");
+    }
+    function closePreview(){
+      $("modalBackdrop").style.display = "none";
+      $("modalBackdrop").setAttribute("aria-hidden","true");
+    }
+
+    /*********************
+     * Species modal
+     *********************/
+    function openSpecies(){
+      $("newCommon").value=""; $("newScientific").value="";
+      $("newSource").value=""; $("newTags").value="";
+      $("speciesBackdrop").style.display="flex";
+      $("speciesBackdrop").setAttribute("aria-hidden","false");
+      $("newCommon").focus();
+    }
+    function closeSpecies(){
+      $("speciesBackdrop").style.display="none";
+      $("speciesBackdrop").setAttribute("aria-hidden","true");
+    }
+    function saveNewSpecies(){
+      const common=$("newCommon").value.trim();
+      const scientific=$("newScientific").value.trim();
+      const source=$("newSource").value.trim();
+      const tags=$("newTags").value.split(",").map(s=>s.trim()).filter(Boolean);
+      if(!common || !scientific){ tLine("catalog: missing common/scientific", "term-bad"); return; }
+
+      const item={ id:"custom_"+Math.random().toString(16).slice(2,10), common, scientific, source, tags };
+      const k=keySpecies(item);
+      if(state.speciesCatalog.some(s=>keySpecies(s)===k)){ tLine("catalog: species already exists", "term-warn"); return; }
+
+      state.speciesCatalog.push(item);
+      state.speciesCatalog.sort((a,b)=>a.common.localeCompare(b.common,"pt-BR"));
+      saveSpecies(); renderSpeciesSelect();
+      $("speciesPreset").value=item.id;
+      setSpeciesInputs(item.common,item.scientific,true);
+      tLine(`catalog: added ${item.common} — ${item.scientific}`, "term-ok");
+      closeSpecies();
+    }
+
+    /*********************
+     * Share modal (QR + PDF)
+     *********************/
+    function openShare(){
+      refreshShareBadge();
+      setQrMode(state.qrMode);
+      renderQrFromCurrent();
+      $("shareBackdrop").style.display="flex";
+      $("shareBackdrop").setAttribute("aria-hidden","false");
+    }
+    function closeShare(){
+      $("shareBackdrop").style.display="none";
+      $("shareBackdrop").setAttribute("aria-hidden","true");
+    }
+    function refreshShareBadge(){
+      const txid = lastTx();
+      $("shareTxBadge").textContent = txid ? ("tx_id: " + txid.slice(0,14) + "…") : "tx_id: —";
+    }
+
+    function setQrMode(mode){
+      state.qrMode = mode;
+      $("qrModeTx").classList.toggle("active", mode==="tx");
+      $("qrModeResume").classList.toggle("active", mode==="resume");
+      $("qrModeFull").classList.toggle("active", mode==="full");
+      renderQrFromCurrent();
+    }
+
+    function buildQrData(){
+      const txid = lastTx();
+      const d = readForm();
+      if(state.qrMode === "tx"){
+        // prioridade: tx_id, senão asset_id
+        return txid || d.asset_id || "";
+      }
+      if(state.qrMode === "resume"){
+        // compacto (melhor para QR)
+        const obj = {
+          tx_id: txid || null,
+          asset_id: d.asset_id || null,
+          doc_hash: d.document?.hash || null,
+          species: d.species?.common || null,
+          volume_m3: d.volume_m3 || null,
+          holder_id: d.holder?.id || null,
+          ts: d.event_ts || null
+        };
+        return JSON.stringify(obj);
+      }
+      // full JSON (pode ficar grande em QR dependendo do tamanho)
+      return JSON.stringify(d);
+    }
+
+    function ensureQrLib(){
+      if(typeof QRCode === "undefined"){
+        tLine("qr: library unavailable", "term-bad");
+        return false;
+      }
+      return true;
+    }
+
+    function clearNode(el){
+      while(el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function renderQr(targetId, text){
+      if(!ensureQrLib()) return null;
+      const target = $(targetId);
+      clearNode(target);
+      if(!text){
+        target.innerHTML = `<div style="color:rgba(17,24,39,.55);font-family:var(--mono);font-size:12px">sem conteúdo</div>`;
+        return null;
+      }
+      const qr = new QRCode(target, {
+        text,
+        width: 220,
+        height: 220,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      return qr;
+    }
+
+    function renderQrFromCurrent(){
+      const data = buildQrData();
+      $("qrData").value = data;
+      state.qrObj = renderQr("qrTarget", data);
+      refreshShareBadge();
+    }
+
+    function renderFreeQr(){
+      const text = $("qrFreeText").value.trim();
+      state.qrFreeObj = renderQr("qrFreeTarget", text);
+    }
+
+    function getQrPngDataUrl(targetId){
+      const target = $(targetId);
+      // qrcodejs pode gerar <img> ou <canvas>
+      const img = target.querySelector("img");
+      if(img?.src) return img.src;
+      const canvas = target.querySelector("canvas");
+      if(canvas) return canvas.toDataURL("image/png");
+      return null;
+    }
+
+    function downloadQrPng(which){
+      const url = (which === "free") ? getQrPngDataUrl("qrFreeTarget") : getQrPngDataUrl("qrTarget");
+      if(!url){ tLine("qr: nothing to export", "term-warn"); return; }
+      const name = (which === "free") ? "qr_custom.png" : "qr_record.png";
+      // baixar via link
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      tLine(`export: ${name}`, "term-ok");
+    }
+
+    async function copyQrContent(){
+      const v = $("qrData").value;
+      if(!v) return;
+      await navigator.clipboard.writeText(v);
+      tLine("qr: content copied", "term-ok");
+    }
+
+    /*********************
+     * PDF exports
+     *********************/
+    function ensurePdfLib(){
+      if(!window.jspdf?.jsPDF){
+        tLine("pdf: jsPDF unavailable", "term-bad");
+        return false;
+      }
+      return true;
+    }
+
+    async function exportPdfRecord(){
+      if(!ensurePdfLib()) return;
+
+      const { jsPDF } = window.jspdf;
+      const d = readForm();
+      const txid = lastTx();
+      const qrData = buildQrData();
+      // garante QR renderizado para pegar imagem
+      renderQr("qrTarget", qrData);
+      await sleep(80);
+      const qrUrl = getQrPngDataUrl("qrTarget");
+
+      const doc = new jsPDF({unit:"pt", format:"a4"});
+      const W = doc.internal.pageSize.getWidth();
+      const margin = 42;
+
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(16);
+      doc.text("RastroMT — Registro de Madeira", margin, 52);
+
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(10);
+      doc.text(`Rede: ${NET.name}   Nó: ${NET.node}`, margin, 70);
+
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(11);
+      doc.text(`tx_id: ${txid || "—"}`, margin, 92);
+
+      // QR à direita
+      if(qrUrl){
+        const qrSize = 120;
+        doc.addImage(qrUrl, "PNG", W - margin - qrSize, 52, qrSize, qrSize);
+        doc.setFont("helvetica","normal");
+        doc.setFontSize(9);
+        doc.text("QR do registro", W - margin - 92, 180, {align:"center"});
+      }
+
+      // Campos principais
+      const lines = [
+        `asset_id: ${d.asset_id}`,
+        `event_ts: ${d.event_ts}`,
+        `espécie: ${d.species.common} — ${d.species.scientific}`,
+        `volume_m3: ${d.volume_m3}`,
+        `autorização: ${d.authorization_id}`,
+        `origem(lat,lon): ${d.origin.lat}, ${d.origin.lon}`,
+        `município/UF: ${d.origin.municipality || "-"}`,
+        `detentor: ${d.holder.name} (${d.holder.id})`,
+        `custódia: ${d.custody_event.from} → ${d.custody_event.to}`,
+        `rota: ${d.custody_event.origin} → ${d.custody_event.destination}`,
+        `custódia_dt: ${d.custody_event.datetime}`,
+        `documento: ${d.document.number}`,
+        `doc_hash: ${d.document.hash}`,
+        `evidence_hash: ${d.evidences.hash || "-"}`,
+        `issuer_signature: ${d.issuer_signature}`,
+        `previous_tx: ${d.previous_tx || "-"}`,
+        `notes: ${d.notes || "-"}`
+      ];
+
+      doc.setFont("courier","normal");
+      doc.setFontSize(9.5);
+
+      let y = 118;
+      const maxWidth = W - margin*2 - (qrUrl ? 140 : 0);
+      for(const l of lines){
+        const parts = doc.splitTextToSize(l, maxWidth);
+        for(const p of parts){
+          doc.text(p, margin, y);
+          y += 14;
+          if(y > 780){
+            doc.addPage();
+            y = 60;
+          }
+        }
+      }
+
+      doc.save("registro_rastromt.pdf");
+      tLine("export: registro_rastromt.pdf", "term-ok");
+    }
+
+    async function exportPdfLedger(){
+      if(!ensurePdfLib()) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({unit:"pt", format:"a4"});
+      const W = doc.internal.pageSize.getWidth();
+      const margin = 42;
+
+      doc.setFont("helvetica","bold");
+      doc.setFontSize(16);
+      doc.text("RastroMT — Ledger (Resumo)", margin, 52);
+
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(10);
+      doc.text(`Rede: ${NET.name}   Nó: ${NET.node}`, margin, 70);
+      doc.text(`Altura: ${state.ledger.length}   Transações: ${state.txIndex.size}`, margin, 86);
+
+      doc.setFont("courier","normal");
+      doc.setFontSize(9.5);
+      let y = 110;
+      if(!state.ledger.length){
+        doc.text("ledger vazio", margin, y);
+      }else{
+        const blocks = state.ledger.slice().reverse().slice(0, 120);
+        for(const b of blocks){
+          const line = `#${b.height}  ${b.hash.slice(0,18)}…  tx=${(b.tx?.[0]||"").slice(0,18)}…  ${b.time}`;
+          const parts = doc.splitTextToSize(line, W - margin*2);
+          for(const p of parts){
+            doc.text(p, margin, y);
+            y += 14;
+            if(y > 780){
+              doc.addPage();
+              y = 60;
+            }
+          }
+        }
+      }
+
+      doc.save("ledger_rastromt.pdf");
+      tLine("export: ledger_rastromt.pdf", "term-ok");
+    }
+
+    async function exportPdfScreen(){
+      if(typeof window.html2canvas === "undefined"){
+        tLine("pdf: html2canvas unavailable", "term-bad");
+        return;
+      }
+      if(!ensurePdfLib()) return;
+
+      const { jsPDF } = window.jspdf;
+      const panel = $("panelLeft");
+      tLine("pdf: capturing screen…", "term-dim");
+
+      const canvas = await window.html2canvas(panel, {scale: 2, useCORS:true, backgroundColor: "#ffffff"});
+      const imgData = canvas.toDataURL("image/png");
+
+      const pdf = new jsPDF({unit:"pt", format:"a4"});
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+
+      // fit image into page
+      const imgW = W;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      let y = 0;
+      let remaining = imgH;
+
+      // render paginated
+      while(remaining > 0){
+        pdf.addImage(imgData, "PNG", 0, y, imgW, imgH);
+        remaining -= H;
+        if(remaining > 0){
+          pdf.addPage();
+          y -= H;
+        }
+      }
+
+      pdf.save("tela_rastromt.pdf");
+      tLine("export: tela_rastromt.pdf", "term-ok");
+    }
+
+    /*********************
+     * Form quick actions
+     *********************/
+    function newEvent(){
+      $("assetId").value = uuidv4();
+      $("eventTs").value = nowLocal();
+      $("custDt").value = nowLocal();
+      $("docHash").value = "";
+      $("evidenceHash").value = "";
+      $("signature").value = "";
+      $("prevTx").value = lastTx() || "";
+      $("notes").value = "";
+      updateBadges();
+      refreshShareBadge();
+    }
+
+    function fillDemo(){
+      $("assetId").value = uuidv4();
+      $("eventTs").value = nowLocal();
+      $("volumeM3").value = "2.340";
+      $("licenseId").value = "PMFS-2026-0123";
+      $("holderName").value = "Madeireira Exemplo Ltda";
+      $("holderId").value = "12.345.678/0001-90";
+      $("custFrom").value = "Madeireira Exemplo Ltda";
+      $("custTo").value = "Serraria Modelo S/A";
+      $("custOrigin").value = "Fazenda X / Talhão 07";
+      $("custDest").value = "Pátio Industrial / Lucas do Rio Verde";
+      $("custDt").value = nowLocal();
+      $("docNumber").value = "DOF 123456";
+      $("docText").value = "Resumo: transporte de toras, lote MT, rota BR-163";
+
+      const teca = state.speciesCatalog.find(s => s.common.toLowerCase() === "teca");
+      if(teca){
+        $("speciesPreset").value = teca.id;
+        setSpeciesInputs(teca.common, teca.scientific, true);
+      }
+      $("prevTx").value = lastTx() || "";
+      $("notes").value = "Registro criado para teste de fluxo (demo).";
+      tLine("ui: demo filled", "term-ok");
+      refreshShareBadge();
+    }
+
+    /*********************
+     * Terminal commands
+     *********************/
+    const COMMANDS = [
+      "help","clear","connect","disconnect","status",
+      "form show","form set","form demo","form new",
+      "catalog list","catalog search",
+      "hash doc","hash evidences",
+      "sign",
+      "tx submit","tx show",
+      "block list","block latest",
+      "ledger export",
+      "qr show",
+      "pdf record","pdf screen","pdf ledger"
+    ];
+
+    function cmdHelp(){
+      tLine("Commands:", "term-accent");
+      tLine("  connect | disconnect            - conexão", "term-dim");
+      tLine("  status                          - status do nó e ledger", "term-dim");
+      tLine("  form show | form demo | form new", "term-dim");
+      tLine("  hash doc | hash evidences       - hashes", "term-dim");
+      tLine("  sign                            - assinatura", "term-dim");
+      tLine("  tx submit | tx show <prefix>    - transações", "term-dim");
+      tLine("  block list | block latest       - blocos", "term-dim");
+      tLine("  ledger export                   - exportar JSON", "term-dim");
+      tLine("  qr show                         - abrir QR/PDF", "term-dim");
+      tLine("  pdf record | pdf screen | pdf ledger", "term-dim");
+    }
+    function cmdStatus(){
+      tLine(`network=${NET.name} node=${NET.node}`, "term-dim");
+      tLine(`connected=${state.connected}`, state.connected ? "term-ok" : "term-warn");
+      tLine(`height=${state.ledger.length} tx_count=${state.txIndex.size} last_tx=${lastTx() ?? "—"}`, "term-dim");
+    }
+    function cmdClear(){ $("termOut").innerHTML=""; termBanner(); }
+    function cmdFormShow(){ tCode("form:", readForm(), "term-dim"); }
+
+    function parseArgs(line){
+      const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
+      const out = []; let m;
+      while((m=re.exec(line))!==null) out.push(m[1] ?? m[2] ?? m[3]);
+      return out;
+    }
+
+    function applyFormSet(path, value){
+      const map = {
+        "asset_id":"assetId",
+        "event_ts":"eventTs",
+        "species.common":"speciesCommon",
+        "species.scientific":"speciesSci",
+        "volume_m3":"volumeM3",
+        "authorization_id":"licenseId",
+        "holder.name":"holderName",
+        "holder.id":"holderId",
+        "custody_event.from":"custFrom",
+        "custody_event.to":"custTo",
+        "custody_event.origin":"custOrigin",
+        "custody_event.destination":"custDest",
+        "custody_event.datetime":"custDt",
+        "document.number":"docNumber",
+        "document.hash":"docHash",
+        "evidences.hash":"evidenceHash",
+        "issuer_signature":"signature",
+        "previous_tx":"prevTx",
+        "notes":"notes"
+      };
+      const el = map[path];
+      if(!el){ tLine(`form set: unsupported field "${path}"`, "term-warn"); return false; }
+      $(el).value = value;
+      return true;
+    }
+
+    function cmdCatalogList(){
+      tLine(`catalog: ${state.speciesCatalog.length} espécies`, "term-dim");
+      state.speciesCatalog.slice(0, 30).forEach(s => tLine(` • ${s.common} — ${s.scientific}`, "term-dim"));
+      if(state.speciesCatalog.length > 30) tLine(" … (mostrando 30)", "term-dim");
+    }
+    function cmdCatalogSearch(term){
+      const q = (term||"").toLowerCase().trim();
+      if(!q){ tLine("catalog search: provide a term", "term-warn"); return; }
+      const hits = state.speciesCatalog.filter(s =>
+        s.common.toLowerCase().includes(q) || s.scientific.toLowerCase().includes(q)
+      ).slice(0, 25);
+      if(!hits.length){ tLine("catalog search: no results", "term-dim"); return; }
+      hits.forEach(s => tLine(` • ${s.common} — ${s.scientific}`, "term-dim"));
+    }
+
+    function cmdTxShow(prefix){
+      if(!prefix){ tLine("tx show: usage tx show <tx_id_prefix>", "term-warn"); return; }
+      const found = [...state.txIndex.values()].find(t => t.tx_id.startsWith(prefix));
+      if(!found){ tLine("tx show: not found", "term-bad"); return; }
+      tCode("tx:", found, "term-dim");
+    }
+    function cmdBlockList(){
+      if(!state.ledger.length){ tLine("block list: empty", "term-dim"); return; }
+      state.ledger.slice(-25).forEach(b => tLine(`#${b.height}  ${b.hash.slice(0,12)}…  tx=${b.tx.length}  ${b.time}`, "term-dim"));
+      if(state.ledger.length > 25) tLine("… (mostrando 25)", "term-dim");
+    }
+    function cmdBlockLatest(){
+      if(!state.ledger.length){ tLine("block latest: empty", "term-dim"); return; }
+      const b = state.ledger[state.ledger.length-1];
+      tLine(`block #${b.height}`, "term-accent");
+      tLine(`hash: ${b.hash}`, "term-dim");
+      tLine(`time: ${b.time}`, "term-dim");
+      tLine(`tx: ${b.tx.join(" ")}`, "term-dim");
+    }
+
+    async function runCommand(line){
+      const raw = line.trim();
+      if(!raw) return;
+      tLine(`${$("termPrompt").textContent}${raw}`, "term-dim");
+
+      const args = parseArgs(raw);
+      const [a,b,c,...rest] = args;
+      const cmd = (a||"").toLowerCase();
+
+      if(cmd==="help" || cmd==="?") return cmdHelp();
+      if(cmd==="clear") return cmdClear();
+      if(cmd==="connect") return connect();
+      if(cmd==="disconnect") return disconnect();
+      if(cmd==="status") return cmdStatus();
+
+      if(cmd==="form" && (b||"").toLowerCase()==="show") return cmdFormShow();
+      if(cmd==="form" && (b||"").toLowerCase()==="demo"){ fillDemo(); tLine("form: demo applied", "term-ok"); return; }
+      if(cmd==="form" && (b||"").toLowerCase()==="new"){ newEvent(); tLine("form: new event", "term-ok"); return; }
+      if(cmd==="form" && (b||"").toLowerCase()==="set"){
+        const path = c;
+        const val = rest.join(" ");
+        if(!path || val===""){ tLine("usage: form set <campo> <valor>", "term-warn"); return; }
+        const ok = applyFormSet(path, val);
+        if(ok) tLine(`form set: ok ${path}="${val}"`, "term-ok");
+        return;
+      }
+
+      if(cmd==="catalog" && (b||"").toLowerCase()==="list") return cmdCatalogList();
+      if(cmd==="catalog" && (b||"").toLowerCase()==="search") return cmdCatalogSearch([c, ...rest].join(" "));
+
+      if(cmd==="hash" && (b||"").toLowerCase()==="doc") return generateDocHash();
+      if(cmd==="hash" && (b||"").toLowerCase()==="evidences") return generateEvidenceHash();
+
+      if(cmd==="sign") return sign();
+
+      if(cmd==="tx" && (b||"").toLowerCase()==="submit") return submitTx();
+      if(cmd==="tx" && (b||"").toLowerCase()==="show") return cmdTxShow(c);
+
+      if(cmd==="block" && (b||"").toLowerCase()==="list") return cmdBlockList();
+      if(cmd==="block" && (b||"").toLowerCase()==="latest") return cmdBlockLatest();
+
+      if(cmd==="ledger" && (b||"").toLowerCase()==="export") return exportLedgerJson();
+
+      if(cmd==="qr" && (b||"").toLowerCase()==="show"){ openShare(); tLine("qr: opened share panel", "term-ok"); return; }
+
+      if(cmd==="pdf" && (b||"").toLowerCase()==="record") return exportPdfRecord();
+      if(cmd==="pdf" && (b||"").toLowerCase()==="screen") return exportPdfScreen();
+      if(cmd==="pdf" && (b||"").toLowerCase()==="ledger") return exportPdfLedger();
+
+      tLine("unknown command (help)", "term-warn");
+    }
+
+
+
+    /*********************
+     * Login simulation
+     *********************/
+    function setCaptchaSolved(on){
+      const el = $("captchaSimulator");
+      const status = $("captchaStatus");
+      el.classList.toggle("done", !!on);
+      el.setAttribute("aria-pressed", on ? "true" : "false");
+      status.textContent = on ? "Captcha validado" : "Captcha pendente";
+      status.style.color = on ? "var(--ok)" : "var(--muted)";
+      status.style.borderColor = on ? "rgba(22,163,74,.28)" : "var(--stroke)";
+      status.style.background = on ? "rgba(22,163,74,.08)" : "#fff";
+    }
+
+    function hideLogin(){
+      $("loginOverlay").style.display = "none";
+      document.body.classList.remove("login-locked");
+      $("loginOverlay").setAttribute("aria-hidden", "true");
+      $("btnConnect").focus();
+    }
+
+    function openPostLoginConnectPrompt(){
+      $("postLoginConnectBackdrop").style.display = "flex";
+      $("postLoginConnectBackdrop").setAttribute("aria-hidden", "false");
+      $("btnPostLoginConnect").focus();
+    }
+
+    function closePostLoginConnectPrompt(){
+      $("postLoginConnectBackdrop").style.display = "none";
+      $("postLoginConnectBackdrop").setAttribute("aria-hidden", "true");
+    }
+
+    async function attemptLogin(){
+      const user = $("loginUser").value.trim();
+      const pass = $("loginPass").value.trim();
+      const captchaOk = $("captchaSimulator").classList.contains("done");
+      $("loginError").style.display = "none";
+      $("loginOk").style.display = "none";
+
+      if(user === "teste" && pass === "teste" && captchaOk){
+        $("loginOk").style.display = "block";
+        tLine("auth: login ok (demo)", "term-ok");
+        await sleep(350);
+        hideLogin();
+        openPostLoginConnectPrompt();
+        return;
+      }
+      $("loginError").textContent = !captchaOk
+        ? "Concluir o captcha de teste antes de entrar."
+        : "Usuário ou senha incorretos. Usar teste / teste.";
+      $("loginError").style.display = "block";
+      tLine("auth: login failed", "term-bad");
+    }
+
+    function wireLogin(){
+      const captcha = $("captchaSimulator");
+      setCaptchaSolved(false);
+      captcha.addEventListener("click", () => setCaptchaSolved(!captcha.classList.contains("done")));
+      captcha.addEventListener("keydown", (e) => {
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          setCaptchaSolved(!captcha.classList.contains("done"));
+        }
+      });
+      $("btnLoginFill").addEventListener("click", () => {
+        $("loginUser").value = "teste";
+        $("loginPass").value = "teste";
+        setCaptchaSolved(true);
+      });
+      $("btnLoginEnter").addEventListener("click", attemptLogin);
+      $("btnPostLoginConnect").addEventListener("click", async () => {
+        closePostLoginConnectPrompt();
+        await connect();
+      });
+      $("btnSkipPostLoginConnect").addEventListener("click", closePostLoginConnectPrompt);
+      $("postLoginConnectBackdrop").addEventListener("click", (e) => {
+        if(e.target === $("postLoginConnectBackdrop")) closePostLoginConnectPrompt();
+      });
+      $("loginPass").addEventListener("keydown", (e) => {
+        if(e.key === "Enter") attemptLogin();
+      });
+      $("loginUser").addEventListener("keydown", (e) => {
+        if(e.key === "Enter") attemptLogin();
+      });
+      $("loginUser").focus();
+    }
+
+
+    /*********************
+     * Wire UI
+     *********************/
+    function wireUI(){
+      $("netNameTop").textContent = NET.name;
+      $("netChip").textContent = NET.name;
+      $("nodeText").textContent = NET.node;
+      $("termTitleNet").textContent = NET.name;
+
+      // Connect / Disconnect
+      $("btnConnect").addEventListener("click", connectOrDisconnect);
+
+      // Share
+      $("btnShare").addEventListener("click", openShare);
+
+      // Generate buttons
+      $("btnGenId").addEventListener("click", () => { $("assetId").value = uuidv4(); tLine("ui: asset_id generated", "term-ok"); refreshShareBadge(); });
+      $("btnGenTs").addEventListener("click", () => { $("eventTs").value = nowLocal(); tLine("ui: event_ts updated", "term-ok"); refreshShareBadge(); });
+      $("btnGenCustTs").addEventListener("click", () => { $("custDt").value = nowLocal(); tLine("ui: custody_event.datetime updated", "term-ok"); refreshShareBadge(); });
+
+      // Species select
+      $("speciesPreset").addEventListener("change", (e) => {
+        const id = e.target.value;
+        if(!id){ setSpeciesInputs("", "", false); refreshShareBadge(); return; }
+        const sp = state.speciesCatalog.find(s => s.id === id);
+        if(sp){
+          setSpeciesInputs(sp.common, sp.scientific, true);
+          tLine(`ui: species set ${sp.common} — ${sp.scientific}`, "term-dim");
+          refreshShareBadge();
+        }
+      });
+
+      // Species modal
+      $("btnAddSpecies").addEventListener("click", openSpecies);
+      $("btnCloseSpecies").addEventListener("click", closeSpecies);
+      $("btnSaveSpecies").addEventListener("click", saveNewSpecies);
+      $("speciesBackdrop").addEventListener("click", (e) => { if(e.target === $("speciesBackdrop")) closeSpecies(); });
+
+      // Map
+      $("btnMyLoc").addEventListener("click", useMyLocation);
+      $("btnClearLoc").addEventListener("click", clearLocation);
+
+      // Hash / signature / preview / submit
+      $("btnHashDoc").addEventListener("click", async () => { await generateDocHash(); refreshShareBadge(); });
+      $("evidenceFiles").addEventListener("change", async () => { await generateEvidenceHash(); refreshShareBadge(); });
+      $("btnSign").addEventListener("click", async () => { await sign(); refreshShareBadge(); });
+      $("btnPreview").addEventListener("click", openPreview);
+      $("btnSend").addEventListener("click", submitTx);
+
+      // New / Demo
+      $("btnNewEvent").addEventListener("click", () => { newEvent(); tLine("ui: new event", "term-ok"); });
+      $("btnFillDemo").addEventListener("click", fillDemo);
+
+      // Preview modal
+      $("btnCloseModal").addEventListener("click", closePreview);
+      $("modalBackdrop").addEventListener("click", (e) => { if(e.target === $("modalBackdrop")) closePreview(); });
+      $("btnCopyPreview").addEventListener("click", async () => {
+        await navigator.clipboard.writeText($("previewPre").textContent);
+        tLine("ui: preview copied", "term-ok");
+      });
+      $("btnExportLedger").addEventListener("click", exportLedgerJson);
+
+      // Share modal
+      $("btnCloseShare").addEventListener("click", closeShare);
+      $("btnShareClose2").addEventListener("click", closeShare);
+      $("shareBackdrop").addEventListener("click", (e) => { if(e.target === $("shareBackdrop")) closeShare(); });
+      $("btnLedgerJson").addEventListener("click", exportLedgerJson);
+
+      $("qrModeTx").addEventListener("click", () => setQrMode("tx"));
+      $("qrModeResume").addEventListener("click", () => setQrMode("resume"));
+      $("qrModeFull").addEventListener("click", () => setQrMode("full"));
+
+      $("btnQrRefresh").addEventListener("click", renderQrFromCurrent);
+      $("btnQrPng").addEventListener("click", () => downloadQrPng("record"));
+      $("btnQrCopy").addEventListener("click", copyQrContent);
+
+      $("btnQrFreeGen").addEventListener("click", renderFreeQr);
+      $("btnQrFreePng").addEventListener("click", () => downloadQrPng("free"));
+
+      $("btnPdfRecord").addEventListener("click", exportPdfRecord);
+      $("btnPdfScreen").addEventListener("click", exportPdfScreen);
+      $("btnPdfLedger").addEventListener("click", exportPdfLedger);
+
+      // Terminal quick buttons
+      $("qHelp").addEventListener("click", () => runCommand("help"));
+      $("qStatus").addEventListener("click", () => runCommand("status"));
+      $("qForm").addEventListener("click", () => runCommand("form show"));
+      $("qBlocks").addEventListener("click", () => runCommand("block latest"));
+      $("qSubmit").addEventListener("click", () => runCommand("tx submit"));
+      $("qShare").addEventListener("click", () => runCommand("qr show"));
+      $("qClear").addEventListener("click", () => runCommand("clear"));
+
+      // Terminal input + history + completion
+      const termIn = $("termIn");
+      termIn.addEventListener("keydown", async (e) => {
+        if(e.key === "Enter"){
+          const line = termIn.value;
+          termIn.value = "";
+          state.cmdHistory.push(line);
+          state.cmdIndex = state.cmdHistory.length;
+          await runCommand(line);
+          return;
+        }
+        if(e.key === "ArrowUp"){
+          e.preventDefault();
+          if(!state.cmdHistory.length) return;
+          state.cmdIndex = Math.max(0, state.cmdIndex - 1);
+          termIn.value = state.cmdHistory[state.cmdIndex] ?? "";
+          return;
+        }
+        if(e.key === "ArrowDown"){
+          e.preventDefault();
+          if(!state.cmdHistory.length) return;
+          state.cmdIndex = Math.min(state.cmdHistory.length, state.cmdIndex + 1);
+          termIn.value = state.cmdHistory[state.cmdIndex] ?? "";
+          return;
+        }
+        if(e.key === "Tab"){
+          e.preventDefault();
+          const v = termIn.value.trim().toLowerCase();
+          if(!v) return;
+          const matches = COMMANDS.filter(c => c.startsWith(v));
+          if(matches.length === 1) termIn.value = matches[0] + " ";
+          else if(matches.length > 1) tLine("suggest: " + matches.join(" | "), "term-dim");
+        }
+      });
+
+      // Mobile tabs
+      const tabLeft = $("tabLeft");
+      const tabRight = $("tabRight");
+      function show(which){
+        if(window.matchMedia("(max-width: 980px)").matches){
+          if(which === "left"){
+            $("panelLeft").setAttribute("data-view","shown");
+            $("panelRight").setAttribute("data-view","hidden");
+            tabLeft.classList.add("active"); tabRight.classList.remove("active");
+          }else{
+            $("panelLeft").setAttribute("data-view","hidden");
+            $("panelRight").setAttribute("data-view","shown");
+            tabLeft.classList.remove("active"); tabRight.classList.add("active");
+            $("termIn").focus();
+          }
+        }
+      }
+      tabLeft.addEventListener("click", () => show("left"));
+      tabRight.addEventListener("click", () => show("right"));
+
+      // Initial UI
+      setConnectedUI(false);
+      setConnectingUI(false);
+
+      $("eventTs").value = nowLocal();
+      $("custDt").value = nowLocal();
+      $("assetId").value = uuidv4();
+      $("prevTx").value = lastTx() || "";
+      refreshShareBadge();
+    }
+
+    /*********************
+     * Boot
+     *********************/
+    window.addEventListener("load", () => {
+      loadLedger();
+      loadSpecies();
+      renderSpeciesSelect();
+      initMap();
+      termBanner();
+      wireUI();
+      wireLogin();
+
+      tLine("ready.", "term-ok");
+    });
+  </script>
+</body>
+</html>
